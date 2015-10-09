@@ -17,13 +17,14 @@ Contains the PatternDataSet class.
 
 """
 
+import os.path
 import logging
-
 import glob
 import re
 import itertools
 from collections import defaultdict
 
+from cwsl.core.metafile import MetaFile
 from cwsl.core.constraint import Constraint
 from cwsl.core.dataset import DataSet
 from cwsl.core.file_creator import FileCreator
@@ -31,37 +32,34 @@ from cwsl.core.file_creator import FileCreator
 module_logger = logging.getLogger('cwsl.core.pattern_dataset')
 
 
-
 class PatternDataSet(DataSet):
-    """ This implmentation of the DataSet abstract class builds a collection of 
-   
+    """ This implmentation of the DataSet abstract class builds a collection of
+
     files and attributes by scanning a pattern on the file system.
-
-    It takes in a filename pattern string in the command-line
-    pipeline format - e.g.:
-
-    pattern_to_glob = "/home/bed02b/test/%colour%/%texture%/%fruit%_%colour%.%file_type%"
 
     """
 
-    def __init__(self, pattern_to_glob,
-                 constraint_set=set()):
+    def __init__(self, pattern_to_glob, constraint_set=set()):
+        """ Arguments:
+
+        pattern_to_glob: this is a string filename pattern, with placeholders
+                         surrounding attribute names.
+                         e.g. "/home/billy/test/%colour%/%texture%/%fruit%_%colour%.%file_type%"
+
+        constraint_set: A set of Constraint objects to restrict the values the
+                        attributes can take.
+        """
 
         self._files = None
-        
-        # Check that added constraints are also found in the input pattern.
-        generated_cons = FileCreator.constraints_from_pattern(pattern_to_glob)
-        gen_names = [cons.key for cons in generated_cons]
-        for cons in constraint_set:
-            if cons.key not in gen_names:
-                raise ConstraintNotFoundError("Constraint {} is not found in output pattern {}".
-                                              format(cons.key, pattern_to_glob))
+
+        self.check_filename_pattern(pattern_to_glob,
+                                    constraint_set)
 
         if constraint_set:
             self.restricted_patterns = []
             given_names, given_values = zip(*[(cons.key, cons.values)
                                               for cons in constraint_set])
-            
+
             # Generate all combinations
             for combination in itertools.product(*given_values):
                 new_pattern = pattern_to_glob
@@ -106,12 +104,22 @@ class PatternDataSet(DataSet):
         # If there are already files found, do not glob.
         if not self._files:
             self._files = self.glob_fs()
-                                        
+
         return self._files
-    
+
+    def check_filename_pattern(self, glob_pattern, constraints):
+        """ Check that added constraints are also found in the input pattern."""
+
+        generated_cons = FileCreator.constraints_from_pattern(glob_pattern)
+        gen_names = [cons.key for cons in generated_cons]
+        for cons in constraints:
+            if cons.key not in gen_names:
+                raise ConstraintNotFoundError("Constraint {} is not found in output pattern {}".
+                                              format(cons.key, glob_pattern))
+
     def glob_fs(self):
         """ Returns a list of the files that match the
-                
+
         glob patterns.
 
         """
@@ -210,18 +218,49 @@ class PatternDataSet(DataSet):
 
         This requires self.create_subsets() to be called before running.
 
+        Returns a list of MetaFile objects.
+
         """
 
         files_returned = []
 
+        all_valid_names = self.cons_names
+        try:
+            all_valid_names += self.alias_map.keys()
+        except:
+            pass
+
         for key in reqs_dict:
-            if key in self.cons_names:
-                att_value = reqs_dict[key]
+            if key in all_valid_names:
+
+                try:
+                    old_key = key
+                    key = self.alias_map[key]
+                except:
+                    old_key = key
+
+                att_value = reqs_dict[old_key]
                 files_returned.append(self.subsets[key][att_value])
+
+        if not files_returned:
+            return []
 
         all_files = set.intersection(*files_returned)
 
-        return list(all_files)
+        output = []
+        for full_path in all_files:
+            out_dict = self.read_atts(full_path)
+            path, name = os.path.split(full_path)
+            output.append(MetaFile(name, path, out_dict))
+
+        return output
+
+    def read_atts(self, file_name):
+        """ Applies the file pattern to a file name to read the correct attributes. """
+
+        match = re.match(self.regex_pattern, file_name)
+
+        return match.groupdict()
 
     def create_subsets(self):
         """ Sets up a hash table to allow you to get the required files

@@ -1,6 +1,6 @@
 """
 
-Creates a timeseries plot 
+Creates a timeseries plot
 
 This module wraps the plot_timeseries.sh script found in git repository cwsl-ctools.
 
@@ -36,7 +36,7 @@ from cwsl.core.pattern_generator import PatternGenerator
 
 class PlotTimeSeries(vistrails_module.Module):
     """
-    Plots a timeseries. 
+    Plots a timeseries.
 
     Required inputs: variable_name (varible name of data from input file)
 
@@ -67,41 +67,30 @@ class PlotTimeSeries(vistrails_module.Module):
         # Get the output pattern using the PatternGenerator object.
         # Gets the user infomation / authoritative path etc from the
         # user configuration.
-        self.out_pattern = PatternGenerator('user', 'monthly_indices').pattern
+        self.out_pattern = PatternGenerator('user', 'default').pattern
 
     def compute(self):
 
         # Required input
         in_dataset = self.getInputFromPort("in_dataset")
+
         variable_name = self.getInputFromPort("variable_name")
-        self.positional_args=[(variable_name,0,'raw'),('model',1)]
+        self.positional_args=[(variable_name, 0, 'raw')]
 
-        new_cons = set([Constraint('variable', [variable_name]),
-                        Constraint('suffix', ['png']),
-                        ])
+        cons_for_output = set([Constraint('suffix', ['png'])])
 
-        # Optional added constraints.
-        try:
-            # Add extra constraints if necessary.
-            added_constraints = self.getInputFromPort('added_constraints')
-            cons_for_output = new_cons.intersection(added_constraints)
-        except vistrails_module.ModuleError:
-            cons_for_output = new_cons
-
-
-        # Execute the seas_vars process.
+        # Execute plotting process.
         this_process = ProcessUnit([in_dataset],
                                    self.out_pattern,
                                    self.command,
                                    cons_for_output,
                                    execution_options=self._execution_options,
-                                   positional_args=self.positional_args)
+                                   positional_args=self.positional_args,
+                                   kw_string="--title '${model}_${experiment}'")
 
         try:
-            this_process.execute(simulate=configuration.simulate_execution)
-        except Exception, e:
-            raise vistrails_module.ModuleError(self, e.output)
-
-        process_output = this_process.file_creator
+            process_output = this_process.execute(simulate=configuration.simulate_execution)
+        except Exception as e:
+            raise vistrails_module.ModuleError(self, repr(e))
 
         self.setResult('out_dataset', process_output)

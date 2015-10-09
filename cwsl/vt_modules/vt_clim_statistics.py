@@ -3,8 +3,9 @@
 Authors:  Tim Bedin (Tim.Bedin@csiro.au)
           Tim Erwin (Tim.Erwin@csiro.au)
           Damien Irving (irving.damien@gmail.com)
+          Craig Heady (craig.heady@csiro.au)
 
-Copyright 2014 CSIRO
+Copyright 2015 CSIRO
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -74,12 +75,12 @@ def latitude_label(lat):
     return label
 
 
-class XmlToNc(vistrails_module.Module):
-    """Crop a dataset on its longitude, latitude, time and/or level axis.
+class ClimStats(vistrails_module.Module):
+    """Perform climatolgical statistics on a dataset allowing subsetting of longitude, latitude, time and/or level axis.
 
     Wraps the cwsl-ctools/utils/xml_to_nc.py script.
 
-    All inputs (besides in_dataset) are optional (i.e. they can be left blank).
+    All inputs (besides in_dataset and stat) are optional (i.e. they can be left blank).
 
     If an optional input is provided, so must its pair (e.g. if you enter a timestart
       you must also enter a timeend). 
@@ -89,6 +90,8 @@ class XmlToNc(vistrails_module.Module):
     # Define the module ports.
     _input_ports = [('in_dataset', 'csiro.au.cwsl:VtDataSet',
                      {'labels': str(['Input dataset'])}),
+                    ('stat', 'csiro.au.cwsl:VtDataSet',
+                     {'labels': str(['Statistic'])}),
                     ('timestart', basic_modules.String,
                      {'labels': str(['Start date (YYYY-MM-DD)']),'optional': True}),
                     ('timeend', basic_modules.String,
@@ -106,7 +109,10 @@ class XmlToNc(vistrails_module.Module):
                     ('leveltop', basic_modules.String,
                      {'labels': str(['Top level']), 'optional': True})]
 
-    _output_ports = [('out_dataset', 'csiro.au.cwsl:VtDataSet')]
+    _output_ports = [('out_dataset_mon',  'csiro.au.cwsl:VtDataSet'),
+                     ('out_dataset_seas', 'csiro.au.cwsl:VtDataSet'),
+                     ('out_dataset_ann',  'csiro.au.cwsl:VtDataSet'),]
+
 
     _execution_options = {'required_modules': ['cdo', 'python/2.7.5','python-cdat-lite/6.0rc2-py2.7.5']}
 

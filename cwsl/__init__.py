@@ -1,5 +1,4 @@
 """
-
 Authors: Tim Bedin, Tim Erwin
 
 Copyright 2014 CSIRO
@@ -19,13 +18,14 @@ import os
 import sys
 import logging
 
-module_logger = logging.getLogger('cswl')
-ch = logging.StreamHandler()
-# When not testing, only log WARNING and above.
-ch.setLevel(logging.WARNING)
-formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-module_logger.addHandler(ch)
+module_logger = logging.getLogger('cwsl')
+
+# If the logger doesn't have a handler, add one.
+if not module_logger.handlers:
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    module_logger.addHandler(ch)
 
 #Initialise project path
 PROJECT_PATH = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
@@ -44,5 +44,3 @@ def package_dependencies():
         return ['org.vistrails.vistrails.spreadsheet']
     else:
         return []
-
-

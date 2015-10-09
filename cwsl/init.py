@@ -30,13 +30,34 @@ import cwsl.vt_modules.drs_dataset as drs
 from cwsl.vt_modules.vt_dataset import VtDataSet
 from cwsl.vt_modules.vt_cdscan import CDScan
 from cwsl.vt_modules.vt_xmltonc import XmlToNc
-from cwsl.vt_modules.vt_seas_vars import SeasVars
-from cwsl.vt_modules.vt_climatology import Climatology
+#from cwsl.vt_modules.change import TimesliceChange
 from cwsl.vt_modules.vt_nino34 import IndicesNino34
 from cwsl.vt_modules.vt_general_command_pattern import GeneralCommandPattern
 from cwsl.vt_modules.vt_constraintbuilder import ConstraintBuilder
 from cwsl.vt_modules.vt_plot_timeseries import PlotTimeSeries
+from cwsl.vt_modules.vt_time_agg import TimeAggregation
+from cwsl.vt_modules.vt_field_agg import FieldAggregation
+from cwsl.vt_modules.vt_meridional_agg import MeridionalAggregation
+from cwsl.vt_modules.vt_zonal_agg import ZonalAggregation
+from cwsl.vt_modules.vt_vertical_agg import VerticalAggregation
+from cwsl.vt_modules.vt_ensemble_agg import EnsembleAggregation
+from cwsl.vt_modules.vt_remap import Remap
+from cwsl.vt_modules.vt_temporal_anomaly import TemporalAnomaly
+from cwsl.vt_modules.vt_dataset_arithmetic import DatasetArithmetic
+from cwsl.vt_modules.vt_fldcor import FieldCorrelation
+from cwsl.vt_modules.vt_timcor import TemporalCorrelation
 from cwsl.vt_modules.imageviewer import ImageViewerPanel
+from cwsl.vt_modules.cmip5_constraints import CMIP5Constraints
+from cwsl.vt_modules.sdm_extract import SDMDataExtract
+from cwsl.vt_modules.cod_dataset import ChangeOfDate
+from cwsl.vt_modules.json_extract import ExtractTimeseries
+from cwsl.vt_modules.mv_output import MoveOutput
+from cwsl.vt_modules.dataset_summary import DatasetSummary
+from cwsl.vt_modules.open_dataset import OpenDataSet
+from cwsl.vt_modules.vt_plot_gridded_seas import PlotGriddedSeas
+from cwsl.vt_modules.vt_cdo_histogram import Histogram
+from cwsl.vt_modules.vt_cdo_calc_pdf import PDF
+from cwsl.vt_modules.vt_cdo_clim_statistics import ClimStatistics
 
 
 def initialize(*args, **keywords):
@@ -58,6 +79,8 @@ def initialize(*args, **keywords):
                    name="Global Climate Model Dataset")
     reg.add_module(drs.RegionalClimateModel, namespace='DataSets|Generic',
                    name='Regional Climate Model DataSet')
+    reg.add_module(OpenDataSet, namespace='DataSets|Generic',
+                   name='Open DataSet from FS pattern')
     reg.add_module(drs.CMIP5, namespace='DataSets|GCM',
                    name="CMIP5")
     reg.add_module(drs.CMIP3, namespace='DataSets|GCM',
@@ -68,27 +91,68 @@ def initialize(*args, **keywords):
                    name='BOM-SDMa-NRM', namespace='DataSets|RCM')
 
     #Aggregation
-    reg.add_module(CDScan, name='Merge Timeseries', namespace='Aggregation')
-    reg.add_module(SeasVars, name='Seasonal Timeseries',
+    reg.add_module(CDScan, name='Merge Timeseries', 
                    namespace='Aggregation')
-    reg.add_module(XmlToNc, name='Timeslice',
-                   namespace='Aggregation')
-    reg.add_module(Climatology, name='Climatology', namespace='Aggregation')
+    reg.add_module(TimeAggregation, name="Time Aggregation",
+                   namespace="Aggregation")
+    reg.add_module(FieldAggregation, name="Field Aggregation",
+                   namespace="Aggregation")
+    reg.add_module(MeridionalAggregation, name="Meridional Aggregation",
+                   namespace="Aggregation")
+    reg.add_module(ZonalAggregation, name="Zonal Aggregation",
+                   namespace="Aggregation")
+    reg.add_module(VerticalAggregation, name="Vertical Aggregation",
+                   namespace="Aggregation")
+    reg.add_module(EnsembleAggregation, name="Ensemble Aggregation",
+                   namespace="Aggregation")
+
+    #Statistics
+    reg.add_module(FieldCorrelation, name='Field Correlation',
+                   namespace='Statistics')
+    reg.add_module(TemporalCorrelation, name='Temporal Correlation',
+                   namespace='Statistics')
+    reg.add_module(ClimStatistics, name='Clim Statistics',
+                   namespace='Statistics')
+    reg.add_module(Histogram, name='Histogram',
+                   namespace='Statistics')
+    reg.add_module(PDF, name='PDF',
+                   namespace='Statistics')
 
     #Indices
     reg.add_module(IndicesNino34, name='Nino3.4', namespace='Indices')
  
     #Visualisation
     reg.add_module(PlotTimeSeries, name='Plot Timeseries', namespace='Visualisation')
+    reg.add_module(PlotGriddedSeas, name='Plot Gridded', namespace='Visualisation')
     #ImageViewerPanel depends on the Spreadsheet package
     reg.add_module(ImageViewerPanel, name='Image Viewer', namespace='Visualisation')
     reg.add_input_port(ImageViewerPanel, 'in_dataset', 'csiro.au.cwsl:VtDataSet')
 
-     #General
+    #General
     reg.add_module(ConstraintBuilder, name='Constraint Builder',
                    namespace='Utilities')
-    reg.add_module(GeneralCommandPattern, name='General Command Line Program',
+    reg.add_module(CMIP5Constraints, name='CMIP5 Constraints',
                    namespace='Utilities')
+    reg.add_module(XmlToNc, name='Crop',
+                   namespace='Utilities')
+    reg.add_module(Remap, name='Remap horizontal grid',
+                   namespace='Utilities')
+    reg.add_module(TemporalAnomaly, name='Temporal Anomaly',
+                   namespace='Utilities')
+    reg.add_module(DatasetArithmetic, name='Dataset Arithmetic',
+                   namespace='Utilities')
+    reg.add_module(MoveOutput, name='Move Output',
+                   namespace='Utilities')
+    reg.add_module(DatasetSummary, name='HTML Summary',
+                   namespace='Utilities')
+
+    # Statistical Downscaling.
+    reg.add_module(ChangeOfDate, name='Change of Date Files',
+                   namespace='Statistical Downscaling')
+    reg.add_module(SDMDataExtract, name='Data Extraction',
+                   namespace='Statistical Downscaling')
+    reg.add_module(ExtractTimeseries, name='Extract JSON Timeseries',
+                   namespace='Statistical Downscaling')
 
 
 def menu_items():

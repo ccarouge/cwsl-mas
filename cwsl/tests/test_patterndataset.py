@@ -24,6 +24,7 @@ import mock
 
 import cwsl.core.pattern_dataset
 from cwsl.core.constraint import Constraint
+from cwsl.core.metafile import MetaFile
 from cwsl.core.pattern_dataset import PatternDataSet, ConstraintNotFoundError
 
 
@@ -44,7 +45,7 @@ class TestPatternDataSet(unittest.TestCase):
         # Create a mock set of files to avoid hitting the file system.
         self.mock_file_list = ['/fake/green_echidna.txt', '/fake/blue_kangaroo.txt',
                                '/fake/red_kangaroo.txt', '/fake/purple_kangaroo.txt']
-        
+
     def test_noconstraints(self):
         ''' The PatternDataSet should glob the FS to find files. '''
 
@@ -71,14 +72,15 @@ class TestPatternDataSet(unittest.TestCase):
 
             # Add the mock fake glob function.
             mock_glob.return_value = self.mock_file_list
-            
+
             test_patternds = PatternDataSet(self.mock_file_pattern)
-            
+
             found_files = test_patternds.get_files({'colour': 'green',
                                                     'animal': 'echidna'})
-            expected_files = ['/fake/green_echidna.txt']
+            expected_files = [MetaFile('green_echidna.txt', '/fake',
+                                       {'colour': 'green', 'animal': 'echidna'})]
 
-            self.assertEqual(found_files, expected_files)
+            self.assertItemsEqual(found_files, expected_files)
             mock_glob.assert_called_once_with()
 
     def test_badconstraints(self):
@@ -95,7 +97,7 @@ class TestPatternDataSet(unittest.TestCase):
         """ When constraints are given in the constructor, restrict the patterns on the fs to glob. """
 
         given_cons = set([Constraint('colour', ['pink', 'green'])])
-                          
+
         pattern_ds = PatternDataSet(self.mock_file_pattern,
                                     given_cons)
 
@@ -116,4 +118,28 @@ class TestPatternDataSet(unittest.TestCase):
             expected_cons = self.fake_constraints
 
             self.assertEqual(pattern_ds.constraints, self.fake_constraints)
+
+    def test_alias_constraints(self):
+        """ The PatternDataSet should be able to alias Constraints.
+
+        This means when asked to get files for the aliased Constraint, it should
+        return files from another Constraints.
+
+        """
+
+        with mock.patch('cwsl.core.pattern_dataset.PatternDataSet.glob_fs') as mock_glob:
+            mock_glob.return_value = self.mock_file_list
+
+            pattern_ds = PatternDataSet(self.mock_file_pattern)
+
+            # Apply the constraint alias - when asked for hue,
+            # it will give you colour.
+            pattern_ds.alias_constraint("colour", "hue")
+
+            found_files = pattern_ds.get_files({'hue': 'red',
+                                                'animal': 'kangaroo'})
+
+            self.assertEqual(1, len(found_files))
+            self.assertEqual("/fake/red_kangaroo.txt",
+                             found_files[0].full_path)
 

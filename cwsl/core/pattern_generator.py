@@ -28,7 +28,7 @@ class PatternGenerator(object):
     a VisTrails module.
 
     """
-
+    
     def __init__(self, destination, data_type):
         self.destination = destination
         self.data_type = data_type
@@ -39,10 +39,10 @@ class PatternGenerator(object):
         except KeyError:
             self.project = "NoProjectSet"
         self.user = os.environ["USER"]
-
+        
         self.pbas = self.load_pbas()
         self.paths = self.load_paths()
-
+        
         # Check the inputs to make sure that they make sense.
         self.check_inputs()
 
@@ -74,41 +74,41 @@ class PatternGenerator(object):
         return pba_dict
 
     def load_paths(self):
-        """ The patterns live here! """
+        """ The patterns live here. 
+        
+        You should use the "default" pattern unless you have a good reason not to. 
+
+        All fields in a pattern are compulsory (i.e. there must be a constraint matching each) 
+        except for the %x_info% fields (e.g. %lat_info%). If there is no matching constraint a
+        placeholder value is inserted (e.g. %lat_info% becomes "origlat") to indicate that
+        that field is unaltered from the original data file.
+        
+        The %extra_info% field in the default pattern is a good place to store information
+        like the name of your index.
+         
+        """
 
         fullpath_dict = {}
-        fullpath_dict["seasonal"] = os.path.join("%mip%/%product%/%grid%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                 "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%year_start%-%year_end%-%seas_agg%_%grid%.%suffix%")
-        fullpath_dict["monthly_ts"] = os.path.join("%mip%/%product%/%grid%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                   "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%year_start%-%year_end%_%grid%.%suffix%")
-        fullpath_dict["seasonal_indices"] = os.path.join("%mip%/%product%/%grid%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%year_start%-%year_end%-%seas_agg%_%index%_%grid%.%suffix%")
-        fullpath_dict["monthly_indices"] = os.path.join("%mip%/%product%/%grid%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%year_start%-%year_end%_%index%_%grid%.%suffix%")
+        fullpath_dict["default"] = os.path.join("%mip%/%product%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
+                                                "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%timestart_info%-%timeend_info%-%anomaly_info%-%timeagg_info%_%levelbottom_info%-%leveltop_info%-%levelagg_info%_%lonwest_info%-%loneast_info%-%lonagg_info%_%latsouth_info%-%latnorth_info%-%latagg_info%_%grid_info%_%extra_info%.%suffix%")
         fullpath_dict["downloaded"] = os.path.join("%mip%/%product%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                   "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%origstart%-%origend%.nc")    
-        fullpath_dict["timeseries"] = os.path.join("%mip%/%product%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                   "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_cdat-5-1-0.xml")
+                                                   "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%origstart%-%origend%.nc")
         fullpath_dict["cdat_lite_catalogue"] = os.path.join("%mip%/%product%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
                                                             "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_cdat-lite-6-0rc2-py2.7.%suffix%")
-        fullpath_dict["seasonal_aggregate"] = os.path.join("%mip%/%product%/%grid%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
-                                                           "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%year_start%-%year_end%-%seas_agg%_%grid%.nc")
+        fullpath_dict["timeslice_change"] = os.path.join("%mip%/%product%/%grid%/%institute%/%model%/%experiment%/%frequency%/%realm%/%variable%/%ensemble%/",
+                                                         "%variable%_%mip_table%_%model%_%experiment%_%ensemble%_%fut_start%-%fut_end%_%change_type%-wrt_%hist_start%-%hist_end%_%seas_agg%_%grid%.nc")
+
         return fullpath_dict
 
 
 # Here are some exceptions that get raised if the patterns are not correct.
 class BadCombinationError(Exception):
-    """ To be raised if a combination that doesn't make sense is requested:
-
-    for example, user downloaded data .
-
-    """
-    # TODO (TB): actually, user downloaded data could be useful.
+    """ Raised if a combination that doesn't make sense is requested."""
 
     pass
 
 
 class PatternNotFoundError(Exception):
-    """ Raised if a requested pattern is not found. """
+    """ Raised if a requested pattern is not found."""
 
     pass

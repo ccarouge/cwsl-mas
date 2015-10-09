@@ -23,6 +23,8 @@ Part of the CWSLab Model Analysis Service VisTrails plugin.
 
 """
 
+import subprocess
+
 from vistrails.core.modules import vistrails_module
 from vistrails.core.modules import basic_modules
 
@@ -51,7 +53,7 @@ class IndicesNino34(vistrails_module.Module):
     _output_ports = [('out_dataset', 'csiro.au.cwsl:VtDataSet'),
                      ('out_constraints', basic_modules.String, True)]
     
-    _execution_options = {'required_modules': ['cdo', 'cct', 'nco', 
+    _execution_options = {'required_modules': ['cdo', 'nco', 
                                                'python/2.7.5','python-cdat-lite/6.0rc2-py2.7.5']}
 
     def __init__(self):
@@ -62,32 +64,42 @@ class IndicesNino34(vistrails_module.Module):
         tools_base_path = configuration.cwsl_ctools_path
         self.command = '${CWSL_CTOOLS}/indices/nino34.sh'
         #Output file structure declaration 
-        self.out_pattern = PatternGenerator('user', 'monthly_indices').pattern
+        self.out_pattern = PatternGenerator('user', 'default').pattern
         
         # Set up the output command for this module, adding extra options.
-        self.positional_args = [('year_start', 2), ('year_end', 3)]
-        
+        self.positional_args = [('timestart_info', 2), ('timeend_info', 3)]
+
     def compute(self):
 
         # Required input
         in_dataset = self.getInputFromPort("in_dataset")
-        
-        new_cons = set([Constraint('index', ['nino34'])])
-        
-        cons_for_output = new_cons
+
+        new_cons = set([Constraint('extra_info', ['nino34']),
+                        Constraint('latsouth_info', ['5S']),
+                        Constraint('latnorth_info', ['5N']),
+                        Constraint('latagg_info', ['fldavg']),
+                        Constraint('lonwest_info', ['190E']),
+                        Constraint('loneast_info', ['240E']),
+                        Constraint('lonagg_info', ['fldavg']),
+                        Constraint('leveltop_info', ['surface']),
+                        Constraint('levelbottom_info', ['surface']),
+                        Constraint('anomaly_info', ['anom']),
+                       ])
         
         # Execute the process.
         this_process = ProcessUnit([in_dataset],
                                    self.out_pattern,
                                    self.command,
-                                   cons_for_output,
+                                   new_cons,
                                    positional_args=self.positional_args,
                                    execution_options=self._execution_options)
 
         try:
             this_process.execute(simulate=configuration.simulate_execution)
-        except Exception, e:
+        except subprocess.CalledProcessError as e:
             raise vistrails_module.ModuleError(self, e.output)
+        except Exception as e:
+            raise vistrails_module.ModuleError(self, repr(e))
 
         process_output = this_process.file_creator
 

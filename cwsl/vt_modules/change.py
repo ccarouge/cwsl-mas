@@ -16,13 +16,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-This is a base module for developers to use to create their own modules.
+This module calculates a time slice change by subtracting
+files from two datasets.
 
 Part of the CWSLab Model Analysis Service VisTrails plugin.
 
 """
-
-import abc
 
 from vistrails.core.modules import vistrails_module
 from vistrails.core.modules import basic_modules
@@ -33,61 +32,54 @@ from cwsl.core.process_unit import ProcessUnit
 from cwsl.core.pattern_generator import PatternGenerator
 
 
-class BaseModule(object):
+class TimesliceChange(vistrails_module.Module):
+    ''' This module calculates the change between a future and
+    baseline dataset.
 
-    __metaclass__ = abc.ABCMeta
+    It wraps the cct cdo_perc_change and cdo_abs_change scripts.
     
+    '''
+
     # Define the module ports.
-    _input_ports = [('in_dataset', 'csiro.au.cwsl:VtDataSet'),
-                    ('added_constraints', basic_modules.List, True,
-                     {'defaults': ["[]"]})]
+    _input_ports = [('future_dataset', 'csiro.au.cwsl:VtDataSet'),
+                    ('baseline_dataset', 'csiro.au.cwsl:VtDataSet')]
     
-    _output_ports = [('out_dataset', 'csiro.au.cwsl:VtDataSet'),
-                     ('out_constraints', basic_modules.String, True)]
+    _output_ports = [('out_dataset', 'csiro.au.cwsl:VtDataSet')]
     
-    _execution_options = {'required_modules': []}
-
-    _module_setup = {'command': '',
-                     'user_authoritative': '',
-                     'data_type': ''}
-    _positional_args = []
-    _added_cons = set([])
-    
-
+    _execution_options = {'required_modules': ['cdo', 'cct', 'nco']}
+                          
     def __init__(self):
+
+        super(TimesliceChange, self).__init__()
         
-        super(BaseModule, self).__init__()
-        
-        #Command Line Tool
+        # Command Line Tool
         tools_base_path = configuration.cwsl_ctools_path
-        self.command = self._module_setup['command']
+        self.command = 'echo ${CWSL_CTOOLS}/change_script_path'
         # Output file structure declaration 
-        self.out_pattern = PatternGenerator(self._module_setup['user_authoritative'],
-                                            self._module_setup['data_type']).pattern
-        
-        # Set up the output command for this module, adding extra options.
-        self.positional_args = self._positional_args
+        self.out_pattern = PatternGenerator('user', 'timeslice_change').pattern
         
     def compute(self):
 
         # Required input
-        in_dataset = self.getInputFromPort("in_dataset")
-        
-        new_cons = self._added_cons
-        
+        future_dataset = self.getInputFromPort("future_dataset")
+        baseline_dataset = self.getInputFromPort("baseline_dataset")
+
         # Execute the process.
-        this_process = ProcessUnit([in_dataset],
+        new_constraints = [Constraint('change_type', ['abs-change'])]
+        this_process = ProcessUnit([future_dataset, baseline_dataset],
                                    self.out_pattern,
                                    self.command,
-                                   cons_for_output,
-                                   positional_args=self.positional_args,
-                                   execution_options=self._execution_options)
+                                   extra_constraints=new_constraints,
+                                   execution_options=self._execution_options,
+                                   map_dict={'fut_start': ('year_start', 0),
+                                             'fut_end': ('year_end', 0),
+                                             'hist_start': ('year_start', 1),
+                                             'hist_end': ('year_end', 1)})
 
         try:
             this_process.execute(simulate=configuration.simulate_execution)
-        except Exception, e:
+        except Exception as e:
             raise vistrails_module.ModuleError(self, e.output)
 
         process_output = this_process.file_creator
-
         self.setResult('out_dataset', process_output)
